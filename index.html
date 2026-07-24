@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>z-stackr-web</title>
+  
+  <script src="coi-serviceworker.js"></script>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+<link rel="modulepreload" href="/z-stackr-web/z-stackr-web-95ad6b5240cb32e8.js" crossorigin="anonymous"><link rel="modulepreload" href="/z-stackr-web/snippets/wasm-bindgen-rayon-38edf6e439f6d70d/src/workerHelpers.no-bundler.js" crossorigin="anonymous"><link rel="preload" href="/z-stackr-web/z-stackr-web-95ad6b5240cb32e8_bg.wasm" crossorigin="anonymous" as="fetch" type="application/wasm"></head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    addEventListener("TrunkApplicationStarted", async () => {
+      await window.wasmBindings.run();
+    });
+  </script>
+
+<script type="module">
+import init, * as bindings from '/z-stackr-web/z-stackr-web-95ad6b5240cb32e8.js';
+const wasm = await init({ module_or_path: '/z-stackr-web/z-stackr-web-95ad6b5240cb32e8_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script></body>
+
+</html>
