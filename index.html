@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>z-stackr-web</title>
   
   <script src="coi-serviceworker.js"></script>
@@ -13,27 +14,107 @@
       padding: 0;
       height: 100%;
       overflow: hidden;
+      /* Stop the browser's own pan/bounce from fighting the Slint canvas on
+         mobile (iOS Safari rubber-banding, pull-to-refresh, etc.). */
+      overscroll-behavior: none;
     }
 
     canvas {
       display: block;
       width: 100%;
       height: 100%;
+      /* Without this, mobile browsers intercept single/multi-finger
+         gestures on the canvas for their own pan/zoom before Slint's
+         winit backend ever sees the pointer events. */
+      touch-action: none;
+      /* Prevent long-press text selection/callout on the canvas itself. */
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* Shown in place of the (otherwise blank) page when the browser can't
+       run this build at all, or when `run()` throws -- mobile users have no
+       console to check, so failures need to be visible on the page. */
+    #z-stackr-fatal-error {
+      display: none;
+      box-sizing: border-box;
+      max-width: 32rem;
+      margin: 3rem auto;
+      padding: 1.5rem;
+      font-family: system-ui, sans-serif;
+      font-size: 1rem;
+      line-height: 1.5;
+      color: #eee;
+      background: #2a1414;
+      border: 1px solid #a33;
+      border-radius: 0.5rem;
+    }
+
+    #z-stackr-fatal-error h1 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      color: #f88;
+    }
+
+    #z-stackr-fatal-error pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.85rem;
+      opacity: 0.85;
     }
   </style>
-<link rel="modulepreload" href="/z-stackr-web/z-stackr-web-95ad6b5240cb32e8.js" crossorigin="anonymous"><link rel="modulepreload" href="/z-stackr-web/snippets/wasm-bindgen-rayon-38edf6e439f6d70d/src/workerHelpers.no-bundler.js" crossorigin="anonymous"><link rel="preload" href="/z-stackr-web/z-stackr-web-95ad6b5240cb32e8_bg.wasm" crossorigin="anonymous" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/z-stackr-web/z-stackr-web-86fdd46ccd896dcd.js" crossorigin="anonymous"><link rel="modulepreload" href="/z-stackr-web/snippets/wasm-bindgen-rayon-38edf6e439f6d70d/src/workerHelpers.no-bundler.js" crossorigin="anonymous"><link rel="preload" href="/z-stackr-web/z-stackr-web-86fdd46ccd896dcd_bg.wasm" crossorigin="anonymous" as="fetch" type="application/wasm"></head>
 
 <body>
   <canvas id="canvas"></canvas>
   <script>
+    // Renders a small, styled, on-page error message in place of the app --
+    // mobile users can't open devtools, so a blank canvas is otherwise the
+    // only symptom they'd ever see.
+    function reportFatalError(title, detail) {
+      document.body.innerHTML =
+        '<div id="z-stackr-fatal-error" style="display: block;">' +
+        '<h1></h1><p></p><pre></pre></div>';
+      var box = document.getElementById("z-stackr-fatal-error");
+      box.querySelector("h1").textContent = title;
+      box.querySelector("p").textContent =
+        "z-stackr couldn't start in this browser.";
+      box.querySelector("pre").textContent = detail || "";
+    }
+
     addEventListener("TrunkApplicationStarted", async () => {
-      await window.wasmBindings.run();
+      // Multithreaded stacking (wasm-bindgen-rayon's Web Worker pool) needs
+      // `SharedArrayBuffer`, which browsers only expose in a cross-origin
+      // isolated context (see apps/stacker-web/README.md). Without it,
+      // `window.wasmBindings.run()` fails deep inside thread-pool init in a
+      // way that's opaque on a phone with no console -- check for it up
+      // front and say so plainly instead.
+      const isolated = typeof crossOriginIsolated !== "undefined" && crossOriginIsolated;
+      const hasSharedArrayBuffer = typeof SharedArrayBuffer !== "undefined";
+      if (!isolated || !hasSharedArrayBuffer) {
+        reportFatalError(
+          "Cross-origin isolation required",
+          "This app needs cross-origin isolation (SharedArrayBuffer) to run its " +
+          "multithreaded WebAssembly module. crossOriginIsolated=" + isolated +
+          ", SharedArrayBuffer=" + hasSharedArrayBuffer + ". " +
+          "The hosting page must serve Cross-Origin-Opener-Policy: same-origin and " +
+          "Cross-Origin-Embedder-Policy: require-corp (see coi-serviceworker.js, which " +
+          "should already be attempting to add these)."
+        );
+        return;
+      }
+
+      try {
+        await window.wasmBindings.run();
+      } catch (e) {
+        reportFatalError("z-stackr failed to start", e && e.stack ? e.stack : String(e));
+      }
     });
   </script>
 
 <script type="module">
-import init, * as bindings from '/z-stackr-web/z-stackr-web-95ad6b5240cb32e8.js';
-const wasm = await init({ module_or_path: '/z-stackr-web/z-stackr-web-95ad6b5240cb32e8_bg.wasm' });
+import init, * as bindings from '/z-stackr-web/z-stackr-web-86fdd46ccd896dcd.js';
+const wasm = await init({ module_or_path: '/z-stackr-web/z-stackr-web-86fdd46ccd896dcd_bg.wasm' });
 
 
 window.wasmBindings = bindings;
